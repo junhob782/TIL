@@ -168,6 +168,8 @@ if (newNode == NULL) {
 // 할당 성공 후 데이터 초기화 필수
 newNode->next = NULL;
 
+
+```
 # [Study] 스택의 이해 (02/11)
 
 ## 14. 스택 (Stack) 개요
