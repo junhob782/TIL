@@ -1,126 +1,297 @@
-# [Study] 머신러닝 기초와 인공신경망(딥러닝) 아키텍처
+# 12. 케라스(Keras)와 Sequential 모델, 그리고 텐서 Shape
 
-## 1. 머신러닝의 3대 핵심 태스크 (Task)
-> *해결하고자 하는 문제의 목적과 정답(Target) 유무에 따른 분류*
+[![Keras](https://img.shields.io/badge/Keras-3.x-D00000?logo=keras&logoColor=white)](https://keras.io)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-FF6F00?logo=tensorflow&logoColor=white)](https://www.tensorflow.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)
+[![JAX](https://img.shields.io/badge/JAX-latest-2196F3)](https://jax.readthedocs.io)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org)
 
-| 학습 방식 | 태스크 | 정의 및 특징 | 실무 예시 |
-| :--- | :--- | :--- | :--- |
-| **지도 학습**<br>(Supervised) | **1. 회귀 (Regression)** | - **정답(Target)이 연속적인 '실수값'인 경우**.<br>- 데이터 간의 선형적인 요소를 따라가며, 양의 상관관계/음의 상관관계가 뚜렷할수록 학습이 매우 잘 됨. | 주택 가격 예측, 주식 가격 예측 |
-| | **2. 분류 (Classification)** | - **소속 집단(클래스)의 정답 정보를 이미 알고 있는 상태**에서, 새로운 데이터가 어디 속할지 묶고 판별하는 방법. | 스팸 메일 필터링, 암 양성/음성 판정 |
-| **비지도 학습**<br>(Unsupervised)| **3. 군집화 (Clustering)** | - **정답 정보가 전혀 없는 상태**에서, 오직 데이터의 특징(Feature)만 분석하여 비슷한 것들끼리 그룹으로 묶는 방법. | 고객 타겟팅 세분화 (VIP, 일반 등) |
-
----
-
-## 2. K-NN (K-Nearest Neighbors, 최근접 이웃) 알고리즘
-* **개념**: 분류(Classification) 태스크에 사용되며, 새로운 데이터가 들어왔을 때 특징 공간(Feature Space) 상에서 가장 가까운 K개의 이웃 데이터를 찾아 다수결로 소속을 정하는 알고리즘.
-* **장단점**:
-    * **장점**: 논리가 아주 단순하고 직관적임. 별도의 훈련(사전 학습) 과정이나 파라미터 조정을 위한 특별한 준비 시간이 필요 없음 (게으른 학습, Lazy Learning).
-    * **단점**: 특징 공간에 있는 **'모든 데이터에 대한 좌표 정보'를 메모리에 들고 있어야 함**. 데이터 인스턴스나 특징(Feature)이 많아지면 메모리 공간이 폭발적으로 필요하며, 거리 계산 시간이 기하급수적으로 늘어남.
+> 머신러닝 기초 학습 시리즈 — **12장**.
+> Keras 고수준 API, Sequential 모델, 텐서 Shape에 대한 학습 메모를 **사실 검증(Fact-check)** 과 **보충 설명** 과 함께 정리합니다.
 
 ---
 
-## 3. 타겟(Target)과 모델의 학습 상태 파악 
+## 📑 목차
 
-[Image of Overfitting vs Underfitting in machine learning]
-
-* **타겟 (Target)**: 모델이 최종적으로 맞추어야 할 목표값 (즉, 정답지, Label, Y값).
-
-### 3.1 과대적합 (Overfitting)
-* **상태**: 모델이 훈련(학습) 데이터에만 지나치게 최적화되어, **새로운 데이터(테스트 데이터)를 만나면 성능이 곤두박질치는 현상**. (마치 기출문제의 정답 번호만 달달 외워서 수능을 망치는 것과 같음).
-
-### 3.2 과소적합 (Underfitting)
-* **상태**: 모델이 너무 단순하거나 학습이 덜 되어서, **훈련 데이터조차도 제대로 맞추지 못하고 성능이 안 나오는 현상**. *(※ 노트 교정: 과소적합은 기본 패턴도 파악하지 못한 상태이므로 새로운 데이터에 대해서도 성능이 잘 나오지 않습니다.)*
-
-### 3.3 아키텍트의 해결책 (정규화, Regularization)
-* 과대적합/과소적합을 막기 위해 **데이터의 양을 늘리거나**, 모델의 복잡도를 제어하는 **제한 조건(L1 라쏘, L2 릿지 페널티 등)**을 부여하여 모델의 일반화(Generalization) 성능을 끌어올려야 함.
+- [표기 규칙](#표기-규칙)
+- [12.1 Keras란 무엇인가](#121-keras란-무엇인가)
+- [12.2 백엔드 — 누가 실제 계산을 수행하는가](#122-백엔드--누가-실제-계산을-수행하는가)
+- [12.3 핵심 데이터 구조 — Model과 Layer](#123-핵심-데이터-구조--model과-layer)
+- [12.4 Sequential 모델 — 가장 단순한 선형 스택](#124-sequential-모델--가장-단순한-선형-스택)
+- [12.5 학습 가중치는 어디에 존재하는가](#125-학습-가중치는-어디에-존재하는가)
+- [12.6 텐서 Shape — `(4, 28, 28, 3)`의 의미](#126-텐서-shape--4-28-28-3의-의미)
+- [✅ 검증 요약 (Self-Validation)](#-검증-요약-self-validation)
+- [📚 참고 자료](#-참고-자료)
 
 ---
 
-## 4. 경사하강법 (Gradient Descent)의 수학적 원리 
-> *"왜 학습 데이터(가중치 업데이트) 수식에 마이너스(-)를 붙일까?"*
+## 표기 규칙
 
-* **오해 교정**: 손실 함수(Loss Function) 값이 크기 때문에 마이너스를 붙이는 것이 아닙니다!
-* **진짜 이유**: 손실 함수에서 미분을 통해 구한 '기울기(Gradient)'는 수학적으로 **값이 가장 가파르게 증가하는 방향(초록색 화살표)**을 가리킵니다. 하지만 우리의 목표는 오차(손실)를 '최소화(바닥으로 내려감)'하는 것이므로, **기울기가 가리키는 방향의 반대 방향으로 이동해야 하기 때문에 의도적으로 마이너스(-)를 붙이는 것**입니다.
-
----
-
-## 5. 인공신경망의 기초: 퍼셉트론과 MLP 
-* **퍼셉트론 (Perceptron)**: 인간의 뇌 신경망(뉴런)을 모방한 가장 단순한 인공지능 모델. 입력 신호에 가중치(Weight)를 곱해 더한 합이, **특정 임계값(Threshold)을 넘으면 활성화되어 1을 출력하고, 그렇지 않으면 0을 출력함** (계단 함수 사용).
-* **다층 퍼셉트론 (MLP - Multi-Layer Perceptron)**: 단일 퍼셉트론의 한계(XOR 문제 등)를 극복하기 위해, **입력층(Input Layer)과 출력층(Output Layer) 사이에 하나 이상의 '은닉층(Hidden Layer)'을 겹겹이 쌓아 올린 구조**. 딥러닝(Deep Learning)의 근간이 됨.
+| 표시 | 의미 |
+| :---: | :--- |
+| 🔴 | **오류 정정** — 원문이 사실과 다른 부분을 바로잡음 |
+| 🟡 | **참고/모호** — 표현이 모호하거나 맥락에 따라 해석이 갈리는 부분 |
+| 🟢 | **보충 설명** — 원문에는 없지만 이해를 돕기 위한 추가 |
 
 ---
 
-## 6. 활성화 함수 (Activation Function)
-> *"함수를 통과한다 = 데이터가 해당 함수의 수학적 특성(모양)을 따라가게 변형된다"*
+## 12.1 Keras란 무엇인가
 
-* **사용 목적**: 신경망에 **'비선형성(Non-linearity)'을 부여**하여 복잡한 패턴을 학습할 수 있게 만듦. (이것이 없으면 아무리 층을 깊게 쌓아도 결국 단순한 선형 회귀 1개와 똑같아짐).
-* **대표적인 활성화 함수**:
-    1. **시그모이드 (Sigmoid)**: 값을 0과 1 사이로 압축함 (이진 분류 확률에 사용).
-    2. **소프트맥스 (Softmax)**: 여러 클래스의 출력값을 확률(총합이 1)로 변환함 (다중 분류에 사용).
-    3. **ReLU (렐루)**: 음수는 0으로, 양수는 그대로 통과시킴 (현대 딥러닝 은닉층의 표준).
-    4. **하이퍼볼릭 탄젠트 (Tanh)**: 값을 -1과 1 사이로 압축함 (RNN이나 트랜스포머 같은 순차적 모델에 자주 사용됨).
+> **원문 메모** — *"파이썬으로 작성되었고, 고수준의 딥러닝 API"*
 
----
+> [!NOTE]
+> **검증 결과 : ✅ 정확함.**
+> Keras는 순수 Python으로 작성된 **고수준(High-level) 딥러닝 API**입니다. 저수준 텐서 연산은 백엔드 프레임워크에 위임하고, 개발자는 **모델 구조 정의** 와 **학습 루프 작성** 에 집중할 수 있도록 설계되었습니다.
 
-## 7. 딥러닝 아키텍처의 핵심: 텐서 형태 (Shape)
-* 딥러닝 모델 설계 시 가장 빈번하게 발생하는 에러는 **입력과 출력 데이터의 차원(Shape, 형태값)이 맞지 않을 때** 발생함.
-* 아키텍트는 항상 입력 데이터의 형태가 은닉층을 거치며 어떻게 변환되고, 최종적으로 타겟(정답)과 동일한 형태의 출력으로 빠져나오는지를 정밀하게 계산하고 맞춰주어야 함.
+<details>
+<summary>🟢 <b>보충 — Keras의 4가지 설계 철학</b></summary>
 
-# [Study] 딥러닝 최적화 알고리즘과 TensorFlow 아키텍처
+Keras의 슬로건은 **"Deep Learning for humans"** 이며, 다음 4가지 목표를 추구합니다.
 
-## 8. 신경망의 층별 함수와 역전파 (Backpropagation)
-* **은닉층 (중간단, Hidden Layer)**: 
-    * 현대 딥러닝의 표준은 **ReLU (Rectified Linear Unit)** 사용. (기울기 소실 문제를 방지하고 연산이 매우 빠름).
-* **출력층 (출력단, Output Layer)**: 
-    * 해결하려는 문제(상황)에 따라 완전히 다른 함수를 맞춤형으로 사용함.
-    * *회귀(실수 예측) $\rightarrow$ 항등 함수 (Linear)*
-    * *이진 분류 $\rightarrow$ 시그모이드 (Sigmoid)*
-    * *다중 분류 $\rightarrow$ 소프트맥스 (Softmax)*
-* **역전파 알고리즘**: 출력층에서 계산된 오차(Error)를 입력층 방향으로 거꾸로(역방향) 전파하면서, 각 노드의 가중치(Weight)가 오차에 기여한 만큼을 수정해 나가는 딥러닝 학습의 핵심 메커니즘.
+1. **단순하고 일관된 인터페이스** 제공
+2. 일반적인 사용 사례에서 **요구되는 행동 수를 최소화**
+3. **점진적 복잡성 공개(Progressive disclosure of complexity)** — 시작은 쉽고, 필요할 때만 복잡한 기능 학습
+4. **간결하고 가독성 높은 코드** 작성 지원
+
+</details>
 
 ---
 
-## 9. 손실 함수 (Loss Function)와 지표
-> *모델의 예측값이 실제 정답과 얼마나 틀렸는지(학습의 성과)를 나타내는 지표. 이 값을 0으로 만드는 것이 학습의 목표입니다.*
+## 12.2 백엔드 — 누가 실제 계산을 수행하는가
 
-* **평균 제곱 오차 (MSE: Mean Squared Error)**: 회귀 문제에서 주로 사용하며, 예측값($\hat{y}$)과 정답($y$) 간의 차이를 제곱하여 평균 낸 값.
-$$MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
-* **엔트로피 (Entropy)**: 
-    * 본래 물리학/정보이론에서 '무질서도', '불확실성(Uncertainty)', 또는 '정보의 혼잡도'를 의미함. 
-    * 딥러닝 분류 문제에서는 이를 응용한 **'교차 엔트로피(Cross-Entropy)'**를 사용하여, 정답 확률분포와 예측 확률분포 간의 차이(불확실성)를 계산하고 최소화함.
+> **원문 메모** — *"주로 사용되는 백엔드 → 텐서플로우"*
 
----
+> [!WARNING]
+> **검증 결과 : 🔴 시점에 따라 사실이 달라짐. 현재(2026년) 기준으로는 부정확.**
+> *"주 백엔드 = TensorFlow"* 는 **Keras 2.x (`tf.keras`) 시절의 설명** 이며, **Keras 3 (2023년 11월 출시)** 부터는 multi-backend 체제로 회귀했습니다.
 
-## 10. 경사하강법 (Gradient Descent)과 파라미터 
-* **경사하강법**: 역전파를 통해 구한 기울기(Gradient)를 이용하여, 손실 함수 값을 최소로 만드는 최적의 가중치를 바닥을 향해 더듬어 찾아가는 최적화 접근법.
-* **학습률 (Learning Rate)**: 
-    * 한 번에 가중치를 얼마나 크게 변경(이동)할 것인가를 결정하는 보폭.
-    * 모델 성능에 심대한 영향을 끼치지만 최적값을 설정하기가 아주 어려움. (너무 크면 값을 찾지 못하고 튕겨 나가며(발산), 너무 작으면 학습이 영원히 끝나지 않음).
-* **모멘텀 (Momentum)**: 
-    * 물리학의 '관성(운동량)' 개념을 도입. 
-    * 이전 이동 방향을 기억하여 가던 방향으로 계속 밀어줌으로써, 지그재그로 요동치는 현상을 줄이고 학습 속도를 가속시킬 목적으로 사용함.
+### 시기별 백엔드 지원 현황
 
----
+| 시점 | 실제 상황 |
+| :--- | :--- |
+| **Keras 1.x ~ 2.x 초기** (2015 ~ 2017) | TensorFlow / Theano / CNTK 중 선택 가능 (multi-backend) |
+| **`tf.keras` 시대** (2017 ~ 2023) | **TensorFlow 단일 체제** 로 통합. 이 시기 한정으로 원문이 맞음 |
+| **Keras 3 시대** (2023년 11월 ~ 현재) | **JAX · TensorFlow · PyTorch** 모두 지원. 추론 전용으로 OpenVINO도 지원 |
 
-## 11. 최적화 알고리즘 (Optimizers)의 진화 
-> *학습률(Learning Rate)을 얼마나 똑똑하게 자동으로 조절할 것인가?*
+### 정정된 표현
 
-| 알고리즘 | 동작 원리 및 특징 | 한계점 및 의의 |
+> ✅ **정정** : *"Keras 3는 JAX, TensorFlow, PyTorch를 모두 백엔드로 지원하며, 환경 변수 `KERAS_BACKEND`로 선택할 수 있다. 한국 강의 자료에서는 역사적 이유로 TensorFlow 백엔드를 기준으로 설명하는 경우가 많다."*
+
+### 백엔드 전환 방법
+
+```python
+import os
+os.environ["KERAS_BACKEND"] = "jax"   # "tensorflow" | "torch" | "jax"
+
+import keras   # ← 환경 변수 설정 후에 import 해야 함
+```
+
+> [!IMPORTANT]
+> `import keras` **이전에** 환경 변수를 설정해야 적용됩니다. 순서가 바뀌면 기본 백엔드로 로드됩니다.
+
+### 백엔드별 특성 (실무 선택 기준)
+
+| 백엔드 | 강점 | 약점 |
 | :--- | :--- | :--- |
-| **Adagrad** | **가변 학습률** 사용. 과거에 많이 변화한 변수는 학습률을 작게, 적게 변화한 변수는 크게 설정함. (이전 단계의 기울기를 누적한 값에 반비례). | 기울기 누적값이 너무 커지면 **학습률이 0에 수렴하여 학습이 조기 중단**되는 치명적 단점이 있음. |
-| **RMSprop** | Adagrad의 단점(학습 중단)을 해결한 수정판. 단순 누적 대신 최근의 기울기를 더 크게 반영하는 **'지수 가중 이동 평균(EMA)'**을 사용함. | 학습률 저하 문제는 해결했으나, 관성(모멘텀)은 없음. |
-| **Adam** | **RMSprop(적응형 학습률) + 모멘텀(관성)**. 두 알고리즘의 장점만 융합한 최강의 하이브리드 최적화 기법. | 현재 딥러닝 실무에서 **가장 기본적으로 쓰이는(Default) 1티어 알고리즘**. |
+| **TensorFlow** | 프로덕션 생태계가 가장 풍부 (TF-Serving, TFLite, TF.js) | 일부 워크로드에서 JAX보다 느림 |
+| **JAX** | XLA 컴파일 기반, GPU/TPU에서 최고 수준의 속도. 대규모 분산 학습에 유리 | 디버깅 난이도 ↑, 생태계가 상대적으로 작음 |
+| **PyTorch** | 연구 커뮤니티 표준, 동적 그래프(Define-by-Run)로 디버깅 용이 | TPU 지원이 TF/JAX보다 약함 |
 
 ---
 
-## 12. 텐서플로우 (TensorFlow) 프레임워크 아키텍처 
-* **정의**: 구글이 만든 딥러닝 프레임워크. 핵심 엔진은 고성능을 위해 C/C++로 구현되어 있으며, 사용자는 파이썬(Python) 등 여러 언어 인터페이스를 통해 쉽게 접근하고 제어할 수 있음.
+## 12.3 핵심 데이터 구조 — Model과 Layer
 
-### 12.1 TensorFlow 구조 (Stack)
-1. **하드웨어 커널**: CPU, GPU, TPU 등 하나 이상의 플랫폼 하드웨어에서 연산을 병렬로 처리함.
-2. **TensorFlow C++ Core**: 무거운 수학 연산과 메모리 관리를 담당하는 백엔드 엔진.
-3. **TensorFlow Python**: C++ 커널을 감싸서(Wrapping) 사용자가 쓰기 편하게 오퍼레이션을 제공하는 API.
-4. **구성요소 라이브러리**: `tf.layers`, `tf.losses`, `tf.metrics` 등 신경망을 조립할 때 쓰는 재사용 가능한 일반 모델 블록들.
-5. **고수준 API (Estimators & Keras)**: 
-    * `Estimators`: (과거에 많이 쓰인) 분산 학습 등을 지원하는 높은 수준의 객체 지향 API.
-    * > **아키텍트 팁**: 현재 TensorFlow 2.x 버전부터는 Estimator보다 훨씬 직관적이고 표준화된 **`tf.keras`**가 최고 수준의 메인 API로 완전히 자리 잡았습니다. 실무에서는 대부분 Keras를 통해 모델을 설계합니다.
+> **원문 메모** — *"핵심 데이터 구조 : 모델 레이어를 구성하는 방법을 나타냄"*
+
+> [!CAUTION]
+> **검증 결과 : 🟡 의미는 통하지만 표현이 모호함.** Keras의 핵심 추상화는 정확히 **두 가지** 입니다.
+
+### 두 가지 핵심 추상화
+
+#### 1️⃣ `Layer` — 가중치(State)와 연산(Computation)의 캡슐화 단위
+
+- 가중치(weights)를 보유하며, `call()` 메서드에 연산 로직 정의
+- 가중치는 **학습 가능(trainable)** 또는 **학습 불가(non-trainable)** 로 구분
+- **재귀적 합성(Recursive composition)** 가능 — 레이어가 다른 레이어를 속성으로 가지면, 바깥 레이어가 안쪽 레이어의 가중치까지 자동 추적
+
+#### 2️⃣ `Model` — 여러 `Layer`를 묶어 학습·추론 가능한 단위로 만든 객체
+
+- `fit()`, `evaluate()`, `predict()`, `save()` 등의 학습/배포 메서드 제공
+
+### 정정된 표현
+
+> ✅ **정정** : *"Keras의 핵심 데이터 구조는 **`Layer`**(가중치+연산 캡슐화 단위)와 **`Model`**(레이어 묶음을 학습·추론 단위로 만든 객체) 두 가지이며, 모델은 이 레이어들을 어떻게 조합할지를 정의하는 컨테이너 역할을 한다."*
+
+### 🟢 보충 — 모델을 정의하는 3가지 방식
+
+| 방식 | 특징 | 적합한 경우 |
+| :--- | :--- | :--- |
+| **Sequential API** | 레이어를 순차적으로 쌓는 가장 단순한 방식 | 입력→출력 흐름이 한 갈래인 단순 MLP, 기본 CNN |
+| **Functional API** | 그래프 형태로 레이어 연결. 다중 입출력, 분기, 잔차 연결 가능 | ResNet, U-Net, Multi-modal 모델 |
+| **Model Subclassing** | `keras.Model`을 상속하여 `call()` 직접 구현. 가장 자유로움 | 커스텀 학습 로직, 동적 그래프 연구용 모델 |
+
+---
+
+## 12.4 Sequential 모델 — 가장 단순한 선형 스택
+
+> **원문 메모** — *"가장 간단한 모델 유형 : Sequential 선형 스택 모델 / 레이어를 선형으로 쌓을 수 있는 신경망 모델"*
+
+> [!NOTE]
+> **검증 결과 : ✅ 정확함.**
+> 공식 문서 정의 그대로입니다 — *"Sequential groups a linear stack of layers into a Model."*
+> (Sequential은 레이어들의 선형 스택을 하나의 Model로 묶는다.)
+
+### 🟢 보충 — Sequential 모델의 제약 (언제 쓰면 안 되는가)
+
+다음 중 **하나라도 해당되면** Sequential을 쓸 수 없으며, **Functional API** 나 **Subclassing** 으로 가야 합니다.
+
+- 레이어가 **다중 입력 또는 다중 출력** 을 가질 때
+- **레이어 공유(layer sharing)** 가 필요할 때 (같은 레이어 인스턴스를 여러 위치에서 사용)
+- **비선형 연결 그래프** 가 필요할 때 (ResNet의 skip connection, U-Net의 encoder-decoder concat 등)
+
+### Sequential 작성 예시 (Keras 3 표준)
+
+#### 방법 ① — 생성자에 레이어 리스트 전달
+
+```python
+import keras
+from keras import layers
+
+model = keras.Sequential([
+    keras.Input(shape=(784,), name="input_layer"),         # 입력 shape 명시 (권장)
+    layers.Dense(64, activation="relu", name="hidden_1"),  # 은닉층
+    layers.Dense(10, activation="softmax", name="output"), # 출력층 (다중 분류)
+], name="my_simple_mlp")
+
+model.summary()
+```
+
+#### 방법 ② — `add()` 메서드로 점진적으로 쌓기
+
+```python
+import keras
+from keras import layers
+
+model = keras.Sequential(name="my_simple_mlp_added")
+model.add(keras.Input(shape=(784,)))
+model.add(layers.Dense(64, activation="relu"))
+model.add(layers.Dense(10, activation="softmax"))
+
+model.summary()
+```
+
+> [!TIP]
+> `keras.Input(shape=...)` 을 **첫 줄에 두는 것이 권장 패턴** 입니다. 입력 shape을 명시하지 않으면 모델은 첫 데이터를 받기 전까지 *"빌드되지 않은(unbuilt)"* 상태로 남아 `model.summary()` 도 호출할 수 없습니다.
+
+---
+
+## 12.5 학습 가중치는 어디에 존재하는가
+
+> **원문 메모** — *"학습 : 출력, 은닉층에 해당"*
+
+> [!WARNING]
+> **검증 결과 : 🔴 단어 선택이 부정확하여 의미가 성립하지 않음. 재해석 필요.**
+
+원문 그대로 읽으면 *"학습(Training)이 출력층·은닉층에 해당한다"* 가 되어 의미가 통하지 않습니다. 메모의 흐름과 Sequential 모델의 구조를 고려하면 다음 둘 중 하나의 의미였을 것으로 추정됩니다.
+
+| 추정 의도 | 정정된 표현 |
+| :--- | :--- |
+| ① Sequential에 추가하는 레이어가 무엇인가? | *"Sequential 모델에서 `add()` 로 추가되는 레이어는 **은닉층(Hidden Layer)** 과 **출력층(Output Layer)** 의 역할을 수행한다. 입력층은 별도의 학습 가중치를 갖지 않으며 `keras.Input()` 으로 shape만 선언한다."* |
+| ② 학습되는 가중치는 어디에 있는가? | *"학습 가능한 가중치(trainable weights)는 **은닉층과 출력층** 에 존재한다. 입력층은 데이터 진입점일 뿐 학습 대상 파라미터가 없다."* |
+
+> ✅ **정정** : 어느 쪽이든 핵심은 **"입력층은 학습 대상이 아니며, 학습 가중치는 은닉층과 출력층에만 존재한다"** 입니다.
+
+### 🟢 보충 — 출력층 활성화 함수 매핑 (이전 7장과 연결)
+
+| 문제 유형 | 출력층 활성화 함수 | 출력층 노드 수 |
+| :--- | :--- | :--- |
+| 회귀 (실수 예측) | Linear (항등) | 1 (또는 타깃 차원) |
+| 이진 분류 | Sigmoid | 1 |
+| 다중 분류 | Softmax | 클래스 개수 |
+
+---
+
+## 12.6 텐서 Shape — `(4, 28, 28, 3)`의 의미
+
+> **원문 메모** — *"shape = (4, 28, 28, 3)  28×28 사이즈의 컬러(3)가 4장 있다"*
+
+> [!NOTE]
+> **검증 결과 : ✅ 정확함.**
+
+### 각 축의 의미
+
+| 축 인덱스 | 값 | 의미 |
+| :---: | :---: | :--- |
+| 0 (Batch) | 4 | **이미지 4장** (배치 크기) |
+| 1 (Height) | 28 | 세로 픽셀 수 |
+| 2 (Width) | 28 | 가로 픽셀 수 |
+| 3 (Channels) | 3 | RGB **3채널 컬러** |
+
+### 🟢 보충 — NHWC vs NCHW 포맷 (실무에서 자주 발생하는 함정)
+
+원문의 `(4, 28, 28, 3)` 은 **NHWC** 포맷이며, TensorFlow / Keras의 **기본값** 입니다.
+
+| 포맷 | 축 순서 | 동일 데이터의 shape | 사용처 |
+| :---: | :--- | :---: | :--- |
+| **NHWC** | (Batch, Height, Width, Channels) | `(4, 28, 28, 3)` | **TensorFlow / Keras 기본**, CPU에서 일반적으로 빠름 |
+| **NCHW** | (Batch, Channels, Height, Width) | `(4, 3, 28, 28)` | **PyTorch 기본**, GPU(cuDNN)에서 일반적으로 빠름 |
+
+> [!CAUTION]
+> **실무 주의점**
+> 같은 이미지 데이터라도 프레임워크마다 축 순서가 다르므로, **PyTorch ↔ TensorFlow 간 모델·가중치를 이식할 때 `permute()` 또는 `transpose()` 로 축을 바꿔주어야 합니다.**
+
+### Keras `Conv2D` 입력에서 shape이 어떻게 흐르는가
+
+```python
+import keras
+from keras import layers
+
+# 입력 : (batch=4, height=28, width=28, channels=3)
+inputs  = keras.Input(shape=(28, 28, 3))                                  # 배치 차원 제외하고 선언
+
+x       = layers.Conv2D(32, kernel_size=3, activation="relu")(inputs)     # → (4, 26, 26, 32)
+x       = layers.MaxPooling2D(pool_size=2)(x)                             # → (4, 13, 13, 32)
+x       = layers.Flatten()(x)                                             # → (4, 5408)
+outputs = layers.Dense(10, activation="softmax")(x)                       # → (4, 10)
+
+model = keras.Model(inputs=inputs, outputs=outputs)
+model.summary()
+```
+
+> [!TIP]
+> `keras.Input(shape=...)` 에는 **배치 차원을 제외** 한 `(28, 28, 3)` 만 적습니다. 배치 차원은 `fit()` 호출 시 동적으로 결정됩니다.
+
+---
+
+## ✅ 검증 요약 (Self-Validation)
+
+| 항목 | 원문 표현 | 검증 결과 | 조치 |
+| :--- | :--- | :---: | :--- |
+| Keras 정의 | 파이썬으로 작성된 고수준 딥러닝 API | ✅ 정확 | 설계 철학 4가지 보충 |
+| 주 백엔드 | 주로 사용되는 백엔드 → 텐서플로우 | 🔴 시점 의존 | Keras 3 multi-backend 체제 명시 |
+| 핵심 데이터 구조 | 모델 레이어를 구성하는 방법 | 🟡 모호 | `Layer` + `Model` 두 가지로 명확화 |
+| Sequential 정의 | 선형 스택 모델 | ✅ 정확 | 공식 문서 정의 인용 + 제약사항 보충 |
+| "학습:출력,은닉층" | 단어 부정확 | 🔴 의미 불성립 | "학습 가중치는 은닉층·출력층에 존재"로 재정의 |
+| Shape `(4,28,28,3)` | 28×28 컬러 4장 | ✅ 정확 | NHWC vs NCHW 포맷 차이 보충 |
+
+### 검증자 코멘트
+
+원문 메모는 **Keras 2.x 시절 한국어 강의 자료** 를 기반으로 한 것으로 추정됩니다. 따라서 *"주 백엔드 = TensorFlow"* 같은 부분은 **2023년 11월 이전 기준에서는 옳았던** 설명입니다. 강의가 틀린 것이 아니라, **현재(2026년) 시점에서는 업데이트가 필요한 정보** 라는 점을 인지하면 됩니다. Sequential의 정의나 텐서 Shape 해석은 시점에 무관하게 **여전히 모두 정확** 합니다.
+
+---
+
+## 📚 참고 자료
+
+- [Keras 공식 문서 — The Sequential model](https://keras.io/guides/sequential_model/)
+- [TensorFlow 공식 가이드 — Keras: The high-level API for TensorFlow](https://www.tensorflow.org/guide/keras)
+- [Keras 3 공식 발표문 — Introducing Keras 3.0](https://keras.io/keras_3/)
+- [Keras GitHub Repository](https://github.com/keras-team/keras)
+- [Keras 2 → 3 마이그레이션 가이드](https://keras.io/guides/migrating_to_keras_3/)
+
+---
+
+<div align="center">
+
+**[⬆ 맨 위로](#12-케라스keras와-sequential-모델-그리고-텐서-shape)**
+
+</div>
